@@ -1,4 +1,3 @@
-this will break the pipeline!!!
 # DevSecOps Pipeline v2 - Security scanning active
 from flask import Flask, request
 import sqlite3
