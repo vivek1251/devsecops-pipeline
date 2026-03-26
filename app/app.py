@@ -1,13 +1,17 @@
 # DevSecOps Pipeline v2 - Security scanning active
 from flask import Flask, request
+from flask_wtf.csrf import CSRFProtect
 import sqlite3
 import os
 
 app = Flask(__name__)
 
-# Intentional vulnerability 1: Hardcoded secret
-SECRET_KEY = "supersecret123"
-DB_PASSWORD = "admin123"
+# Secrets loaded from environment variables (not hardcoded)
+app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'fallback-dev-key')
+DB_PASSWORD = os.environ.get('DB_PASSWORD', '')
+
+# CSRF Protection enabled
+csrf = CSRFProtect(app)
 
 def get_db():
     conn = sqlite3.connect("users.db")
