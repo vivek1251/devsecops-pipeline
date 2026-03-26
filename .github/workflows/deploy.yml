@@ -67,8 +67,9 @@ jobs:
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.EC2_HOST }}
-          username: ${{ secrets.EC2_USER }}
+          username: ${{ secrets.EC2_USERNAME }}
           key: ${{ secrets.EC2_KEY }}
+          use_insecure_cipher: true
           script: |
             docker pull ${{ secrets.DOCKER_USERNAME }}/devsecops-app:latest
             docker stop devsecops-app || true
