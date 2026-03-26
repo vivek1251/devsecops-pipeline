@@ -3,7 +3,7 @@ import sqlite3
 import os
 from unittest.mock import patch
 
-os.environ['APP_SECRET_KEY'] = 'test-secret-key'
+os.environ['FLASK_SECRET'] = 'test-secret-key'
 
 from app import app, get_db
 
