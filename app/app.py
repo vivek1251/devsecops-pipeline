@@ -7,7 +7,7 @@ import os
 app = Flask(__name__)
 
 # Secret loaded from environment variable only — no fallback
-app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY')
+app.config['SECRET_KEY'] = os.environ.get('APP_SECRET_KEY', 'dev-only-fallback')
 DB_PASSWORD = os.environ.get('DB_PASSWORD', '')
 
 # CSRF Protection enabled
