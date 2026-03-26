@@ -1,3 +1,4 @@
+# DevSecOps Pipeline v2 - Security scanning active
 from flask import Flask, request
 import sqlite3
 import os
