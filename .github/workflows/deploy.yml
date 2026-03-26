@@ -7,14 +7,14 @@ on:
 
 jobs:
 
-  secrets-scan:                          # ← NEW JOB — add this entire block
+  secrets-scan:
     name: Secrets - Gitleaks Scan
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0                 # full history scan, not just latest commit
+          fetch-depth: 0
 
       - name: Gitleaks secrets scan
         uses: gitleaks/gitleaks-action@v2
@@ -24,7 +24,7 @@ jobs:
   sast:
     name: SAST - SonarCloud Scan
     runs-on: ubuntu-latest
-    needs: secrets-scan                  # ← ADD THIS LINE (was empty before)
+    needs: secrets-scan
     steps:
       - uses: actions/checkout@v4
 
@@ -34,11 +34,14 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
           SONAR_HOST_URL: https://sonarcloud.io
+        with:
+          args: >
+            -Dsonar.qualitygate.wait=true
 
   dast:
     name: DAST - OWASP ZAP Scan
     runs-on: ubuntu-latest
-    needs: sast                          # unchanged
+    needs: sast
     steps:
       - uses: actions/checkout@v4
 
@@ -60,7 +63,7 @@ jobs:
   build-and-deploy:
     name: Build, Push & Deploy
     runs-on: ubuntu-latest
-    needs: dast                          # unchanged
+    needs: dast
     steps:
       - uses: actions/checkout@v4
 
@@ -75,8 +78,8 @@ jobs:
           docker build -t ${{ secrets.DOCKER_USERNAME }}/devsecops-app:latest ./app
           docker push ${{ secrets.DOCKER_USERNAME }}/devsecops-app:latest
 
-      - name: Trivy image scan                        # ← ADD THIS STEP
-        uses: aquasecurity/trivy-action@master        #   (was missing from build job)
+      - name: Trivy image scan
+        uses: aquasecurity/trivy-action@master
         with:
           image-ref: ${{ secrets.DOCKER_USERNAME }}/devsecops-app:latest
           exit-code: '1'
@@ -105,7 +108,7 @@ jobs:
   notify-failure:
     name: Notify Failure
     runs-on: ubuntu-latest
-    needs: [secrets-scan, sast, dast, build-and-deploy]   # ← ADD secrets-scan here
+    needs: [secrets-scan, sast, dast, build-and-deploy]
     if: failure()
     steps:
       - name: Slack Failure Alert
