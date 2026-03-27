@@ -41,6 +41,16 @@ Code Push → GitHub Actions
 | Zero manual intervention | Entire security review automated on every git push |
 
 ---
+## Demo
+
+### GitHub Actions Pipeline
+![Pipeline](f1.gif)
+
+### SonarQube Analysis
+![SonarQube](f2.gif)
+
+### Slack Notifications
+![Slack](f3.gif)
 
 ## 🛠️ Tech Stack
 
@@ -216,13 +226,3 @@ MIT License — feel free to use this as a template for your own DevSecOps pipel
 
 ⭐ If this project helped you, please give it a star — it means a lot!
 
-## Demo
-
-### GitHub Actions Pipeline
-![Pipeline](f1.gif)
-
-### SonarQube Analysis
-![SonarQube](f2.gif)
-
-### Slack Notifications
-![Slack](f3.gif)
