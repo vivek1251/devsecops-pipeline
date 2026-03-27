@@ -24,6 +24,15 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Slack Alert - Gitleaks Failed
+        if: failure()
+        uses: rtCamp/action-slack-notify@v2
+        env:
+          SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
+          SLACK_MESSAGE: "❌ *Gitleaks failed* — secrets detected in code!\nCommit: `${{ github.sha }}`\n<${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|View Run>"
+          SLACK_COLOR: danger
+          SLACK_TITLE: "🔑 Secrets Scan Failed"
+
   dependency-scan:
     name: Dependency Scan - pip-audit
     runs-on: ubuntu-latest
@@ -36,7 +45,7 @@ jobs:
         uses: actions/setup-python@v4
         with:
           python-version: '3.11'
-          cache: 'pip'                    # ✅ Cache pip dependencies
+          cache: 'pip'
 
       - name: Install pip-audit
         run: pip install pip-audit
@@ -56,6 +65,15 @@ jobs:
           name: pip-audit-report
           path: pip-audit-report.json
 
+      - name: Slack Alert - pip-audit Failed
+        if: failure()
+        uses: rtCamp/action-slack-notify@v2
+        env:
+          SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
+          SLACK_MESSAGE: "❌ *pip-audit failed* — vulnerable Python dependencies found!\nCommit: `${{ github.sha }}`\n<${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|View Run>"
+          SLACK_COLOR: danger
+          SLACK_TITLE: "🐍 Dependency Scan Failed"
+
   sast:
     name: SAST - SonarCloud Scan
     runs-on: ubuntu-latest
@@ -67,7 +85,7 @@ jobs:
         uses: actions/setup-python@v4
         with:
           python-version: '3.11'
-          cache: 'pip'                    # ✅ Cache pip dependencies
+          cache: 'pip'
 
       - name: Install dependencies
         run: pip install -r app/requirements.txt
@@ -107,6 +125,15 @@ jobs:
             -Dsonar.qualitygate.wait=true
             -Dsonar.python.coverage.reportPaths=app/coverage.xml
 
+      - name: Slack Alert - SAST Failed
+        if: failure()
+        uses: rtCamp/action-slack-notify@v2
+        env:
+          SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
+          SLACK_MESSAGE: "❌ *SAST failed* — Bandit or SonarCloud Quality Gate failed!\nCommit: `${{ github.sha }}`\n<${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|View Run>"
+          SLACK_COLOR: danger
+          SLACK_TITLE: "🔍 SAST Scan Failed"
+
   dast:
     name: DAST - OWASP ZAP Scan
     runs-on: ubuntu-latest
@@ -139,6 +166,15 @@ jobs:
 
       - name: Stop app
         run: docker stop app && docker rm app
+
+      - name: Slack Alert - DAST Failed
+        if: failure()
+        uses: rtCamp/action-slack-notify@v2
+        env:
+          SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
+          SLACK_MESSAGE: "❌ *DAST failed* — OWASP ZAP found critical vulnerabilities!\nCommit: `${{ github.sha }}`\n<${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|View Run>"
+          SLACK_COLOR: danger
+          SLACK_TITLE: "🌐 DAST Scan Failed"
 
   build-and-deploy:
     name: Build, Push & Deploy
@@ -176,6 +212,15 @@ jobs:
           exit-code: '1'
           severity: 'CRITICAL,HIGH'
 
+      - name: Slack Alert - Trivy Failed
+        if: failure()
+        uses: rtCamp/action-slack-notify@v2
+        env:
+          SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
+          SLACK_MESSAGE: "❌ *Trivy failed* — CRITICAL/HIGH CVEs found in Docker image!\nCommit: `${{ github.sha }}`\n<${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|View Run>"
+          SLACK_COLOR: danger
+          SLACK_TITLE: "🐳 Container Scan Failed"
+
       - name: Generate SBOM with Syft
         uses: anchore/sbom-action@v0
         with:
@@ -200,6 +245,15 @@ jobs:
             docker stop devsecops-app || true
             docker rm devsecops-app || true
             docker run -d -p 5000:5000 --name devsecops-app ${{ secrets.DOCKER_USERNAME }}/devsecops-app:latest
+
+      - name: Slack Alert - Deploy Failed
+        if: failure()
+        uses: rtCamp/action-slack-notify@v2
+        env:
+          SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
+          SLACK_MESSAGE: "❌ *Deploy failed* — EC2 deployment unsuccessful!\nCommit: `${{ github.sha }}`\n<${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|View Run>"
+          SLACK_COLOR: danger
+          SLACK_TITLE: "🚀 Deploy Failed"
 
       - name: Slack Success Alert
         uses: rtCamp/action-slack-notify@v2
