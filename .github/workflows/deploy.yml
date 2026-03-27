@@ -38,7 +38,6 @@ jobs:
         run: pip install pip-audit
 
       - name: Run pip-audit
-        continue-on-error: true
         run: |
           pip-audit -r app/requirements.txt \
             --format=json \
@@ -129,8 +128,21 @@ jobs:
         uses: aquasecurity/trivy-action@master
         with:
           image-ref: ${{ secrets.DOCKER_USERNAME }}/devsecops-app:latest
-          exit-code: '0'
+          exit-code: '1'
           severity: 'CRITICAL,HIGH'
+
+      - name: Generate SBOM with Syft
+        uses: anchore/sbom-action@v0
+        with:
+          image: ${{ secrets.DOCKER_USERNAME }}/devsecops-app:latest
+          format: spdx-json
+          output-file: sbom.spdx.json
+
+      - name: Upload SBOM as Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: sbom-spdx
+          path: sbom.spdx.json
 
       - name: Deploy to EC2
         uses: appleboy/ssh-action@master
@@ -148,7 +160,7 @@ jobs:
         uses: rtCamp/action-slack-notify@v2
         env:
           SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
-          SLACK_MESSAGE: "✅ DevSecOps Pipeline passed! Gitleaks ✅ pip-audit ✅ SAST ✅ DAST ✅ Trivy ✅ App deployed to EC2."
+          SLACK_MESSAGE: "✅ DevSecOps Pipeline passed! Gitleaks ✅ pip-audit ✅ SAST ✅ DAST ✅ Trivy ✅ SBOM ✅ App deployed to EC2."
           SLACK_COLOR: good
           SLACK_TITLE: "Pipeline Passed"
 
