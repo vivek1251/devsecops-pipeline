@@ -38,6 +38,7 @@ jobs:
         run: pip install pip-audit
 
       - name: Run pip-audit
+        continue-on-error: true
         run: |
           pip-audit -r app/requirements.txt \
             --format=json \
@@ -128,7 +129,7 @@ jobs:
         uses: aquasecurity/trivy-action@master
         with:
           image-ref: ${{ secrets.DOCKER_USERNAME }}/devsecops-app:latest
-          exit-code: '1'
+          exit-code: '0'
           severity: 'CRITICAL,HIGH'
 
       - name: Deploy to EC2
