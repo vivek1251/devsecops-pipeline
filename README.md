@@ -91,6 +91,13 @@ Every push to the repository automatically triggers:
 ![Slack Alerts](big%20file%202.gif)
 
 ---
+### 🌍 3-Environment Deploy — Staging → Pre-prod → Production Approval
+
+> Full pipeline passing all stages with manual approval gate for production deployment.
+
+![3-Environment Deploy](big%20file%204.gif)
+
+---
 
 ## 🏗️ Architecture
 
