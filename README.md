@@ -5,12 +5,18 @@
 ![DevSecOps](https://img.shields.io/badge/DevSecOps-Pipeline-blue?style=for-the-badge&logo=github-actions&logoColor=white)
 ![Python](https://img.shields.io/badge/Python-3776AB?style=for-the-badge&logo=python&logoColor=white)
 ![Docker](https://img.shields.io/badge/Docker-2496ED?style=for-the-badge&logo=docker&logoColor=white)
-![SonarQube](https://img.shields.io/badge/SonarCloud-4E9BCD?style=for-the-badge&logo=sonarcloud&logoColor=white)
+![SonarCloud](https://img.shields.io/badge/SonarCloud-4E9BCD?style=for-the-badge&logo=sonarcloud&logoColor=white)
 ![GitHub Actions](https://img.shields.io/badge/GitHub_Actions-2088FF?style=for-the-badge&logo=github-actions&logoColor=white)
 ![Trivy](https://img.shields.io/badge/Trivy-Security_Scan-orange?style=for-the-badge&logo=aqua&logoColor=white)
 ![Slack](https://img.shields.io/badge/Slack-Alerts-4A154B?style=for-the-badge&logo=slack&logoColor=white)
 ![Bandit](https://img.shields.io/badge/Bandit-SAST-yellow?style=for-the-badge&logo=python&logoColor=white)
 ![SBOM](https://img.shields.io/badge/SBOM-Syft-green?style=for-the-badge&logo=anchore&logoColor=white)
+
+> **A fully automated, enterprise-grade CI/CD pipeline with security baked in at every stage — secrets scanning, dependency auditing, SAST, DAST, container scanning, SBOM generation, 3-environment deployment with manual approval gate, and real-time stage-level Slack alerts.**
+
+</div>
+
+---
 
 ## 📊 Pipeline Health
 
@@ -23,10 +29,6 @@
 ![SBOM](https://img.shields.io/badge/SBOM-Generated-blue?style=for-the-badge&logo=anchore&logoColor=white)
 ![Dependabot](https://img.shields.io/badge/Dependabot-Enabled-025E8C?style=for-the-badge&logo=dependabot&logoColor=white)
 
-> **A fully automated, enterprise-grade CI/CD pipeline with security baked in at every stage — secrets scanning, dependency auditing, SAST, DAST, container scanning, SBOM generation, and real-time stage-level Slack alerts.**
-
-</div>
-
 ---
 
 ## 📋 Table of Contents
@@ -35,6 +37,7 @@
 - [Pipeline in Action](#-pipeline-in-action)
 - [Architecture](#-architecture)
 - [Pipeline Stages](#-pipeline-stages)
+- [3-Environment Deployment](#-3-environment-deployment)
 - [Security Tools](#-security-tools)
 - [Project Structure](#-project-structure)
 - [Setup & Installation](#-setup--installation)
@@ -52,9 +55,14 @@ Every push to the repository automatically triggers:
 - 🔑 **Secrets scanning** — Gitleaks detects any leaked credentials
 - 🐍 **Dependency scanning** — pip-audit checks for CVEs in Python packages
 - 🔍 **SAST** — Bandit + SonarCloud perform deep static code analysis
-- 🌐 **DAST** — OWASP ZAP scans for runtime vulnerabilities
-- 🐳 **Build, Push & Deploy** — Docker image built, scanned with Trivy, SBOM generated, deployed to EC2
+- 🌐 **DAST** — OWASP ZAP full-scan for runtime vulnerabilities
+- 🐳 **Build, Push & Scan** — Docker image built, scanned with Trivy, SBOM generated
+- 🟡 **Deploy to Staging** — Auto-deploy on every commit
+- 🟠 **Deploy to Pre-prod** — Auto-deploy after staging passes
+- ⏸️ **Manual Approval Gate** — Human review required before production
+- 🟢 **Deploy to Production** — Final deployment after approval
 - 📣 **Stage-level Slack alerts** — Real-time pass/fail notifications per stage
+- 🤖 **Dependabot** — Automated weekly dependency update PRs
 
 ---
 
@@ -62,7 +70,7 @@ Every push to the repository automatically triggers:
 
 ### ✅ GitHub Actions — Full Pipeline Run (Success)
 
-> All stages passed — Gitleaks ✅ · pip-audit ✅ · Bandit ✅ · SonarCloud ✅ · OWASP ZAP ✅ · Trivy ✅ · SBOM ✅
+> All stages passed — Gitleaks ✅ · pip-audit ✅ · Bandit ✅ · SonarCloud ✅ · OWASP ZAP ✅ · Trivy ✅ · SBOM ✅ · Staging ✅ · Pre-prod ✅ · Production ✅
 
 ![GitHub Actions Pipeline](big%20file%201.gif)
 
@@ -85,29 +93,27 @@ Every push to the repository automatically triggers:
 ---
 
 ## 🏗️ Architecture
+
 ```
 Developer Push / Pull Request
             │
             ▼
-┌───────────────────────────────────────────────────────────────────────┐
-│                        GitHub Actions CI/CD                           │
-│                                                                       │
-│  ┌──────────┐  ┌───────────┐  ┌──────────────┐  ┌────────┐  ┌─────┐ │
-│  │ Gitleaks │─▶│ pip-audit │─▶│Bandit+Sonar  │─▶│OWASPZap│─▶│Build│ │
-│  │ Secrets  │  │ Dep Scan  │  │     SAST     │  │  DAST  │  │Deploy│ │
-│  └──────────┘  └───────────┘  └──────────────┘  └────────┘  └─────┘ │
-│                                                               │       │
-│                                          ┌────────────────────▼─────┐ │
-│                                          │ Trivy + SBOM + EC2 Deploy│ │
-│                                          └──────────────────────────┘ │
-│                                                                       │
-│  ┌─────────────────────────────────────────────────────────────────┐  │
-│  │              Stage-Level Slack Alerts (each job)                │  │
-│  └─────────────────────────────────────────────────────────────────┘  │
-└───────────────────────────────────────────────────────────────────────┘
-                              │
-                              ▼
-                        AWS EC2 Deploy
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                          GitHub Actions CI/CD                               │
+│                                                                             │
+│  ┌──────────┐  ┌───────────┐  ┌──────────────┐  ┌────────┐  ┌──────────┐  │
+│  │ Gitleaks │─▶│ pip-audit │─▶│Bandit+Sonar  │─▶│OWASPZap│─▶│Build+    │  │
+│  │ Secrets  │  │ Dep Scan  │  │     SAST     │  │  DAST  │  │Trivy+SBOM│  │
+│  └──────────┘  └───────────┘  └──────────────┘  └────────┘  └──────────┘  │
+│                                                                    │        │
+│              ┌─────────────────────────────────────────────────────▼──────┐ │
+│              │  🟡 Staging → 🟠 Pre-prod → ⏸️ Manual Approval → 🟢 Prod  │ │
+│              └────────────────────────────────────────────────────────────┘ │
+│                                                                             │
+│  ┌─────────────────────────────────────────────────────────────────────┐   │
+│  │                Stage-Level Slack Alerts (each job)                  │   │
+│  └─────────────────────────────────────────────────────────────────────┘   │
+└─────────────────────────────────────────────────────────────────────────────┘
 ```
 
 ---
@@ -147,31 +153,53 @@ Audits all Python dependencies in `requirements.txt` against the PyPI Advisory D
 - Security Issues: **0**
 - Code Coverage: **99.4%**
 - Security Rating: **A**
-```yaml
-- name: SonarCloud Scan
-  uses: SonarSource/sonarqube-scan-action@v5.0.0
-```
 
 ---
 
-### 4. 🌐 DAST — OWASP ZAP Scan
-Dynamically tests the running application for vulnerabilities like XSS, SQL injection, and misconfigurations.
+### 4. 🌐 DAST — OWASP ZAP Full-Scan
+Actively attacks the running application to find vulnerabilities like XSS, SQL injection, and misconfigurations.
 ```yaml
 - name: OWASP ZAP Scan
-  uses: zaproxy/action-baseline@v0.10.0
+  uses: zaproxy/action-full-scan@v0.10.0
+```
+> 138 checks PASS · 0 FAIL ✅
+
+---
+
+### 5. 🐳 Build, Push, Scan & SBOM
+Builds the Docker image, scans with **Trivy**, generates an **SBOM with Syft**, pushes to Docker Hub.
+```bash
+docker build -t devsecops-app .
+trivy image devsecops-app    # CVE scan
+syft devsecops-app           # SBOM generation
+docker push vivek1251/devsecops-app
 ```
 
 ---
 
-### 5. 🐳 Build, Push, Scan & Deploy
-Builds the Docker image, scans with **Trivy**, generates an **SBOM with Syft**, pushes to Docker Hub, and deploys to **AWS EC2**.
-```bash
-docker build -t devsecops-app .
-trivy image devsecops-app          # CVE scan
-syft devsecops-app                 # SBOM generation
-docker push vivek1251/devsecops-app
-ssh ec2-user@<EC2_IP> "docker pull && docker run ..."
+## 🌍 3-Environment Deployment
+
 ```
+Build & Scan
+     │
+     ▼
+🟡 Staging (auto)          → my-cicd-server      port 5001
+     │
+     ▼
+🟠 Pre-prod (auto)         → cicd-server         port 5000
+     │
+     ▼
+⏸️  Manual Approval Gate   → vivek1251 must approve
+     │
+     ▼
+🟢 Production (approved)   → devsecops-server    port 5000
+```
+
+| Environment | Server | Trigger |
+|-------------|--------|---------|
+| 🟡 Staging | my-cicd-server | Auto on every commit |
+| 🟠 Pre-prod | cicd-server | Auto after staging passes |
+| 🟢 Production | devsecops-server | Manual approval required |
 
 ---
 
@@ -183,19 +211,22 @@ ssh ec2-user@<EC2_IP> "docker pull && docker run ..."
 | **pip-audit** | Dependency Scan | CVE scanning of Python packages | Pre-build |
 | **Bandit** | SAST | Python-specific static security analysis | Pre-build |
 | **SonarCloud** | SAST | Static code quality & security analysis | Pre-build |
-| **OWASP ZAP** | DAST | Dynamic runtime vulnerability testing | Post-deploy |
+| **OWASP ZAP** | DAST | Full active runtime vulnerability testing | Post-deploy |
 | **Trivy** | Container Scan | Docker image CVE scanning | Post-build |
 | **Syft** | SBOM | Software Bill of Materials generation | Post-build |
+| **Dependabot** | Dependency Updates | Automated weekly PRs for outdated packages | Scheduled |
 | **Slack Bot** | Alerting | Stage-level real-time notifications | All stages |
 
 ---
 
 ## 📁 Project Structure
+
 ```
 devsecops-pipeline/
 ├── .github/
-│   └── workflows/
-│       └── deploy.yml              # Main CI/CD pipeline
+│   ├── workflows/
+│   │   └── deploy.yml              # Main CI/CD pipeline
+│   └── dependabot.yml              # Automated dependency updates
 ├── app/
 │   ├── app.py                      # Python Flask application
 │   ├── test_app.py                 # Unit tests (99.4% coverage)
@@ -218,7 +249,7 @@ devsecops-pipeline/
 - Docker
 - GitHub account
 - SonarCloud account
-- AWS EC2 instance
+- AWS EC2 instances (3 for full environment setup)
 - Slack workspace
 
 ### Local Setup
@@ -256,16 +287,22 @@ Set these in **Settings → Secrets → Actions**:
 | `SONAR_TOKEN` | SonarCloud authentication token |
 | `DOCKER_USERNAME` | Docker Hub username |
 | `DOCKER_PASSWORD` | Docker Hub password |
-| `EC2_HOST` | AWS EC2 public IP |
-| `EC2_USERNAME` | EC2 SSH username |
-| `EC2_KEY` | EC2 private SSH key |
+| `STAGING_HOST` | Staging EC2 public IP |
+| `STAGING_USERNAME` | Staging EC2 SSH username |
+| `STAGING_KEY` | Staging EC2 private SSH key |
+| `PREPROD_HOST` | Pre-prod EC2 public IP |
+| `PREPROD_USERNAME` | Pre-prod EC2 SSH username |
+| `PREPROD_KEY` | Pre-prod EC2 private SSH key |
+| `EC2_HOST` | Production EC2 public IP |
+| `EC2_USERNAME` | Production EC2 SSH username |
+| `EC2_KEY` | Production EC2 private SSH key |
 | `SLACK_WEBHOOK` | Slack incoming webhook URL |
 
 ---
 
 ## 📣 Slack Notifications
 
-The pipeline sends **stage-level** real-time Slack alerts via `devsecops-bot`:
+The pipeline sends **stage-level** real-time Slack alerts:
 
 | Stage | Alert |
 |-------|-------|
@@ -274,8 +311,32 @@ The pipeline sends **stage-level** real-time Slack alerts via `devsecops-bot`:
 | 🔍 SAST | ❌ Bandit or SonarCloud Quality Gate failed |
 | 🌐 DAST | ❌ OWASP ZAP found critical vulnerabilities |
 | 🐳 Trivy | ❌ CRITICAL/HIGH CVE in Docker image |
-| 🚀 Deploy | ❌ EC2 deployment failed |
-| ✅ Pipeline | ✅ All stages passed, app deployed to EC2 |
+| 🟡 Staging | ✅ Staging deployed successfully |
+| 🟠 Pre-prod | ✅ Pre-prod deployed, awaiting approval |
+| 🚀 Production | ✅ Full pipeline passed, production deployed |
+
+---
+
+## 🔮 Future Improvements
+
+| Feature | Effort |
+|---------|--------|
+| Pipeline metrics dashboard | Advanced |
+
+### ✅ Recently Completed
+| Feature | Status |
+|---------|--------|
+| 3-environment deploy (staging → preprod → prod) | ✅ Done |
+| Manual approval gate for production | ✅ Done |
+| OWASP ZAP full-scan (vs baseline) | ✅ Done |
+| Dependabot auto-PRs for dependency updates | ✅ Done |
+| Vigilant mode (commit verification) | ✅ Done |
+| pip + Docker layer caching | ✅ Done |
+| Stage-level Slack alerts | ✅ Done |
+| Branch protection on main | ✅ Done |
+| SBOM generation with Syft | ✅ Done |
+| Bandit SAST scanning | ✅ Done |
+| pip-audit dependency scanning | ✅ Done |
 
 ---
 
@@ -298,5 +359,6 @@ Made with ❤️ by [vivek1251](https://github.com/vivek1251)
 ![Security](https://img.shields.io/badge/Security-First-red?style=for-the-badge&logo=shield&logoColor=white)
 ![Status](https://img.shields.io/badge/Pipeline-Passing-brightgreen?style=for-the-badge&logo=github-actions&logoColor=white)
 ![License](https://img.shields.io/badge/License-MIT-blue?style=for-the-badge)
+![Environments](https://img.shields.io/badge/Environments-3-purple?style=for-the-badge&logo=amazon-aws&logoColor=white)
 
 </div>
