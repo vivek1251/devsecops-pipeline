@@ -254,9 +254,9 @@ jobs:
             docker pull ${{ secrets.DOCKER_USERNAME }}/devsecops-app:latest
             docker stop devsecops-app || true
             docker rm devsecops-app || true
-            docker run -d -p 5000:5000 --name devsecops-app ${{ secrets.DOCKER_USERNAME }}/devsecops-app:latest
+            docker run -d -p 5001:5000 --name devsecops-app ${{ secrets.DOCKER_USERNAME }}/devsecops-app:latest
 
-      - name: Slack Alert - Staging Deployed
+            - name: Slack Alert - Staging Deployed
         uses: rtCamp/action-slack-notify@v2
         env:
           SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
@@ -289,9 +289,7 @@ jobs:
             docker pull ${{ secrets.DOCKER_USERNAME }}/devsecops-app:latest
             docker stop devsecops-app || true
             docker rm devsecops-app || true
-            docker run -d -p 5000:5000 --name devsecops-app ${{ secrets.DOCKER_USERNAME }}/devsecops-app:latest
-
-      - name: Slack Alert - Pre-prod Deployed
+            - name: Slack Alert - Pre-prod Deployed
         uses: rtCamp/action-slack-notify@v2
         env:
           SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
@@ -324,9 +322,7 @@ jobs:
             docker pull ${{ secrets.DOCKER_USERNAME }}/devsecops-app:latest
             docker stop devsecops-app || true
             docker rm devsecops-app || true
-            docker run -d -p 5000:5000 --name devsecops-app ${{ secrets.DOCKER_USERNAME }}/devsecops-app:latest
-
-      - name: Slack Alert - Production Failed
+            - name: Slack Alert - Production Failed
         if: failure()
         uses: rtCamp/action-slack-notify@v2
         env:
