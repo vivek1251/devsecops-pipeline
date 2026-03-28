@@ -166,9 +166,9 @@ jobs:
           target: "http://localhost:5000"
           fail_action: false
           cmd_options: '-I'
-          issue_title: ''
           token: ${{ secrets.GITHUB_TOKEN }}
-
+          allow_issue_writing: false
+          
       - name: Stop app
         run: docker stop app && docker rm app
 
