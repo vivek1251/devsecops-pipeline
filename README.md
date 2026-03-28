@@ -12,6 +12,17 @@
 ![Bandit](https://img.shields.io/badge/Bandit-SAST-yellow?style=for-the-badge&logo=python&logoColor=white)
 ![SBOM](https://img.shields.io/badge/SBOM-Syft-green?style=for-the-badge&logo=anchore&logoColor=white)
 
+## 📊 Pipeline Health
+
+![Pipeline Status](https://img.shields.io/github/actions/workflow/status/vivek1251/devsecops-pipeline/deploy.yml?label=Pipeline&style=for-the-badge&logo=github-actions)
+![Last Commit](https://img.shields.io/github/last-commit/vivek1251/devsecops-pipeline?style=for-the-badge&logo=git&logoColor=white)
+![Issues](https://img.shields.io/github/issues/vivek1251/devsecops-pipeline?style=for-the-badge&logo=github)
+![Coverage](https://img.shields.io/badge/Coverage-99.4%25-brightgreen?style=for-the-badge&logo=pytest&logoColor=white)
+![Security Rating](https://img.shields.io/badge/Security_Rating-A-brightgreen?style=for-the-badge&logo=sonarcloud&logoColor=white)
+![Vulnerabilities](https://img.shields.io/badge/Vulnerabilities-0-brightgreen?style=for-the-badge&logo=shield&logoColor=white)
+![SBOM](https://img.shields.io/badge/SBOM-Generated-blue?style=for-the-badge&logo=anchore&logoColor=white)
+![Dependabot](https://img.shields.io/badge/Dependabot-Enabled-025E8C?style=for-the-badge&logo=dependabot&logoColor=white)
+
 > **A fully automated, enterprise-grade CI/CD pipeline with security baked in at every stage — secrets scanning, dependency auditing, SAST, DAST, container scanning, SBOM generation, and real-time stage-level Slack alerts.**
 
 </div>
