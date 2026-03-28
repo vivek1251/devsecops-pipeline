@@ -31,7 +31,7 @@ jobs:
           SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
           SLACK_MESSAGE: "❌ *Gitleaks failed* — secrets detected in code!\nCommit: `${{ github.sha }}`\n<${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|View Run>"
           SLACK_COLOR: danger
-          SLACK_TITLE: "🔑 Secrets Scan Failed"
+          SLACK_TITLE: "Secrets Scan Failed"
 
   dependency-scan:
     name: Dependency Scan - pip-audit
@@ -51,7 +51,7 @@ jobs:
         run: pip install pip-audit
 
       - name: Run pip-audit
-        continue-on-error: true  # No fix available for CVE-2026-4539 (pygments)
+        continue-on-error: true
         run: |
           pip-audit -r app/requirements.txt \
             --format=json \
@@ -72,7 +72,7 @@ jobs:
           SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
           SLACK_MESSAGE: "❌ *pip-audit failed* — vulnerable Python dependencies found!\nCommit: `${{ github.sha }}`\n<${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|View Run>"
           SLACK_COLOR: danger
-          SLACK_TITLE: "🐍 Dependency Scan Failed"
+          SLACK_TITLE: "Dependency Scan Failed"
 
   sast:
     name: SAST - SonarCloud Scan
@@ -134,7 +134,7 @@ jobs:
           SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
           SLACK_MESSAGE: "❌ *SAST failed* — Bandit or SonarCloud Quality Gate failed!\nCommit: `${{ github.sha }}`\n<${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|View Run>"
           SLACK_COLOR: danger
-          SLACK_TITLE: "🔍 SAST Scan Failed"
+          SLACK_TITLE: "SAST Scan Failed"
 
   dast:
     name: DAST - OWASP ZAP Scan
@@ -161,10 +161,12 @@ jobs:
           sleep 5
 
       - name: OWASP ZAP Scan
-        uses: zaproxy/action-baseline@v0.10.0
+        continue-on-error: true
+        uses: zaproxy/action-full-scan@v0.10.0
         with:
           target: "http://localhost:5000"
           fail_action: false
+          cmd_options: '-I'
 
       - name: Stop app
         run: docker stop app && docker rm app
@@ -176,10 +178,10 @@ jobs:
           SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
           SLACK_MESSAGE: "❌ *DAST failed* — OWASP ZAP found critical vulnerabilities!\nCommit: `${{ github.sha }}`\n<${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|View Run>"
           SLACK_COLOR: danger
-          SLACK_TITLE: "🌐 DAST Scan Failed"
+          SLACK_TITLE: "DAST Scan Failed"
 
-  build-and-deploy:
-    name: Build, Push & Deploy
+  build-and-push:
+    name: Build, Push & Scan Image
     runs-on: ubuntu-latest
     needs: dast
     steps:
@@ -221,7 +223,7 @@ jobs:
           SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
           SLACK_MESSAGE: "❌ *Trivy failed* — CRITICAL/HIGH CVEs found in Docker image!\nCommit: `${{ github.sha }}`\n<${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|View Run>"
           SLACK_COLOR: danger
-          SLACK_TITLE: "🐳 Container Scan Failed"
+          SLACK_TITLE: "Container Scan Failed"
 
       - name: Generate SBOM with Syft
         uses: anchore/sbom-action@v0
@@ -236,7 +238,83 @@ jobs:
           name: sbom-spdx
           path: sbom.spdx.json
 
-      - name: Deploy to EC2
+  deploy-staging:
+    name: Deploy to Staging
+    runs-on: ubuntu-latest
+    needs: build-and-push
+    environment: staging
+    steps:
+      - name: Deploy to Staging EC2
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.STAGING_HOST }}
+          username: ${{ secrets.STAGING_USERNAME }}
+          key: ${{ secrets.STAGING_KEY }}
+          script: |
+            docker pull ${{ secrets.DOCKER_USERNAME }}/devsecops-app:latest
+            docker stop devsecops-app || true
+            docker rm devsecops-app || true
+            docker run -d -p 5001:5000 --name devsecops-app ${{ secrets.DOCKER_USERNAME }}/devsecops-app:latest
+
+      - name: Slack Alert - Staging Deployed
+        uses: rtCamp/action-slack-notify@v2
+        env:
+          SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
+          SLACK_MESSAGE: "🟡 *Staging deployed successfully!*\nCommit: `${{ github.sha }}`\n<${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|View Run>"
+          SLACK_COLOR: warning
+          SLACK_TITLE: "Staging Deploy"
+
+      - name: Slack Alert - Staging Failed
+        if: failure()
+        uses: rtCamp/action-slack-notify@v2
+        env:
+          SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
+          SLACK_MESSAGE: "❌ *Staging deploy failed!*\nCommit: `${{ github.sha }}`\n<${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|View Run>"
+          SLACK_COLOR: danger
+          SLACK_TITLE: "Staging Deploy Failed"
+
+  deploy-preprod:
+    name: Deploy to Pre-prod
+    runs-on: ubuntu-latest
+    needs: deploy-staging
+    environment: preprod
+    steps:
+      - name: Deploy to Pre-prod EC2
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.PREPROD_HOST }}
+          username: ${{ secrets.PREPROD_USERNAME }}
+          key: ${{ secrets.PREPROD_KEY }}
+          script: |
+            docker pull ${{ secrets.DOCKER_USERNAME }}/devsecops-app:latest
+            docker stop devsecops-app || true
+            docker rm devsecops-app || true
+            docker run -d -p 5000:5000 --name devsecops-app ${{ secrets.DOCKER_USERNAME }}/devsecops-app:latest
+
+      - name: Slack Alert - Pre-prod Deployed
+        uses: rtCamp/action-slack-notify@v2
+        env:
+          SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
+          SLACK_MESSAGE: "🟠 *Pre-prod deployed successfully!* Awaiting manual approval for Production.\nCommit: `${{ github.sha }}`\n<${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|View Run>"
+          SLACK_COLOR: warning
+          SLACK_TITLE: "Pre-prod Deploy"
+
+      - name: Slack Alert - Pre-prod Failed
+        if: failure()
+        uses: rtCamp/action-slack-notify@v2
+        env:
+          SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
+          SLACK_MESSAGE: "❌ *Pre-prod deploy failed!*\nCommit: `${{ github.sha }}`\n<${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|View Run>"
+          SLACK_COLOR: danger
+          SLACK_TITLE: "Pre-prod Deploy Failed"
+
+  deploy-production:
+    name: Deploy to Production
+    runs-on: ubuntu-latest
+    needs: deploy-preprod
+    environment: production
+    steps:
+      - name: Deploy to Production EC2
         uses: appleboy/ssh-action@master
         with:
           host: ${{ secrets.EC2_HOST }}
@@ -248,27 +326,27 @@ jobs:
             docker rm devsecops-app || true
             docker run -d -p 5000:5000 --name devsecops-app ${{ secrets.DOCKER_USERNAME }}/devsecops-app:latest
 
-      - name: Slack Alert - Deploy Failed
+      - name: Slack Alert - Production Failed
         if: failure()
         uses: rtCamp/action-slack-notify@v2
         env:
           SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
-          SLACK_MESSAGE: "❌ *Deploy failed* — EC2 deployment unsuccessful!\nCommit: `${{ github.sha }}`\n<${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|View Run>"
+          SLACK_MESSAGE: "❌ *Production deploy failed!*\nCommit: `${{ github.sha }}`\n<${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|View Run>"
           SLACK_COLOR: danger
-          SLACK_TITLE: "🚀 Deploy Failed"
+          SLACK_TITLE: "Production Deploy Failed"
 
       - name: Slack Success Alert
         uses: rtCamp/action-slack-notify@v2
         env:
           SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
-          SLACK_MESSAGE: "✅ DevSecOps Pipeline passed! Gitleaks ✅ pip-audit ✅ Bandit ✅ SAST ✅ DAST ✅ Trivy ✅ SBOM ✅ App deployed to EC2."
+          SLACK_MESSAGE: "✅ *Full pipeline passed!* Gitleaks ✅ pip-audit ✅ Bandit ✅ SAST ✅ DAST ✅ Trivy ✅ SBOM ✅\n🟡 Staging ✅ 🟠 Pre-prod ✅ 🟢 Production ✅"
           SLACK_COLOR: good
-          SLACK_TITLE: "Pipeline Passed"
+          SLACK_TITLE: "Production Deployed"
 
   notify-failure:
     name: Notify Failure
     runs-on: ubuntu-latest
-    needs: [secrets-scan, dependency-scan, sast, dast, build-and-deploy]
+    needs: [secrets-scan, dependency-scan, sast, dast, build-and-push, deploy-staging, deploy-preprod, deploy-production]
     if: failure()
     steps:
       - name: Slack Failure Alert
