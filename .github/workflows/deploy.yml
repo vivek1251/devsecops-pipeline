@@ -162,7 +162,7 @@ jobs:
 
       - name: OWASP ZAP Scan
         continue-on-error: true
-        uses: zaproxy/action-full-scan@v0.10.0
+        uses: zaproxy/action-full-scan@v0.13.0
         with:
           target: "http://localhost:5000"
           fail_action: false
